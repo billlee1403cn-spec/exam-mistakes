@@ -3,7 +3,7 @@ name: Build Android APK
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, offline]
 
 jobs:
   build:
@@ -26,7 +26,10 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Frontend Dependencies
+      - name: Accept Android Licenses
+        run: yes | $ANDROID_HOME/tools/bin/sdkmanager --licenses 2>/dev/null || true
+
+      - name: Install Dependencies
         run: npm install
 
       - name: Build Frontend
@@ -34,15 +37,12 @@ jobs:
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL || 'https://exam-mistakes-production.up.railway.app' }}
 
-      - name: Copy Frontend to Capacitor
+      - name: Sync Capacitor
         run: npx cap sync android
-
-      - name: Make Gradlew Executable
-        run: chmod +x android/gradlew
 
       - name: Build APK
         working-directory: android
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
