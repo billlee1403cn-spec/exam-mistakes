@@ -1,9 +1,9 @@
 name: Build Android APK
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
-  workflow_dispatch:
 
 jobs:
   build:
@@ -26,20 +26,19 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Dependencies (Frontend)
-        run: npm ci
+      - name: Install Frontend Dependencies
+        run: npm install
 
       - name: Build Frontend
         run: npm run build
         env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL || 'https://exam-mistakes-api.onrender.com' }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL || 'https://exam-mistakes-production.up.railway.app' }}
 
-      - name: Install Dependencies (Server)
-        working-directory: server
-        run: npm ci
-
-      - name: Sync Capacitor
+      - name: Copy Frontend to Capacitor
         run: npx cap sync android
+
+      - name: Make Gradlew Executable
+        run: chmod +x android/gradlew
 
       - name: Build APK
         working-directory: android
