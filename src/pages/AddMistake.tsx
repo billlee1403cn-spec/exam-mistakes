@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Save, ArrowLeft, Sparkles, Loader2 } from 'lucide-react'
-import { mistakesApi } from '../services/api'
+import { db } from '../db'
+import { generateId } from '../hooks/utils'
 import type { Subject } from '../types'
 import { SUBJECTS } from '../types'
 import ImageViewer from '../components/ImageViewer'
@@ -64,7 +65,9 @@ export default function AddMistake() {
 
     setSaving(true)
     try {
-      const payload = {
+      const now = Date.now()
+      await db.mistakes.add({
+        id: generateId(),
         subject,
         title: title || `${SUBJECTS.find(s => s.id === subject)?.label || ''}错题`,
         questionText,
@@ -78,9 +81,11 @@ export default function AddMistake() {
         },
         knowledgePoints: [...knowledgePoints],
         notes,
-      }
-
-      await mistakesApi.create(payload)
+        createdAt: now,
+        updatedAt: now,
+        mastered: false,
+        reviewCount: 0,
+      })
       navigate('/mistakes')
     } catch (err: any) {
       alert(err.message || '保存失败')

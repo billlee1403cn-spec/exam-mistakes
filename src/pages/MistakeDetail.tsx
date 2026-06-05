@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, BookOpen, Tag, Trash2, CheckCircle, Clock, Calendar, Loader2 } from 'lucide-react'
-import { mistakesApi } from '../services/api'
+import { db } from '../db'
 import type { Mistake } from '../types'
 import { formatDate, getSubjectLabel, getSubjectColor } from '../hooks/utils'
 import AnswerPanel from '../components/AnswerPanel'
@@ -19,8 +19,14 @@ export default function MistakeDetail() {
   useEffect(() => {
     if (!id) return
     setLoading(true)
-    mistakesApi.get(id)
-      .then(res => setMistake(res.data))
+    db.mistakes.get(id)
+      .then(data => {
+        if (data) {
+          setMistake(data)
+        } else {
+          navigate('/mistakes', { replace: true })
+        }
+      })
       .catch(() => navigate('/mistakes', { replace: true }))
       .finally(() => setLoading(false))
   }, [id, navigate])
@@ -29,7 +35,7 @@ export default function MistakeDetail() {
     if (!id) return
     setDeleteLoading(true)
     try {
-      await mistakesApi.delete(id)
+      await db.mistakes.delete(id)
       navigate('/mistakes', { replace: true })
     } catch (err: any) {
       alert(err.message || '删除失败')
@@ -42,8 +48,9 @@ export default function MistakeDetail() {
     if (!mistake || !id) return
     setMasterLoading(true)
     try {
-      await mistakesApi.toggleMastered(id, !mistake.mastered)
-      setMistake(prev => prev ? { ...prev, mastered: !prev.mastered, updatedAt: Date.now() } : null)
+      const updated = { ...mistake, mastered: !mistake.mastered, updatedAt: Date.now() }
+      await db.mistakes.put(updated)
+      setMistake(updated)
     } catch (err: any) {
       alert(err.message || '操作失败')
     } finally {

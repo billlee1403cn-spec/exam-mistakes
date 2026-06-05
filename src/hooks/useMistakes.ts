@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { mistakesApi } from '../services/api'
+import { db } from '../db'
 import type { Mistake } from '../types'
 
 export function useMistakes() {
@@ -9,8 +9,8 @@ export function useMistakes() {
   const loadMistakes = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await mistakesApi.list({ limit: 100 })
-      setMistakes(res.data)
+      const data = await db.mistakes.orderBy('createdAt').reverse().toArray()
+      setMistakes(data)
     } catch (err) {
       console.error('Failed to load mistakes:', err)
     } finally {
@@ -35,8 +35,8 @@ export function useMistake(id: string | undefined) {
       return
     }
     setLoading(true)
-    mistakesApi.get(id)
-      .then(res => setMistake(res.data))
+    db.mistakes.get(id)
+      .then(data => setMistake(data || null))
       .catch(err => console.error('Failed to load mistake:', err))
       .finally(() => setLoading(false))
   }, [id])

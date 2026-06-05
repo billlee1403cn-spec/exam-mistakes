@@ -1,8 +1,7 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Search, SortAsc, ChevronLeft, ChevronRight } from 'lucide-react'
-import { mistakesApi, type MistakesListResponse } from '../services/api'
-import type { MistakesListParams } from '../services/api'
-import type { Subject } from '../types'
+import { useState, useEffect, useMemo } from 'react'
+import { Search, SortAsc } from 'lucide-react'
+import { db } from '../db'
+import type { Mistake, Subject } from '../types'
 import MistakeCard from '../components/MistakeCard'
 import SubjectFilter from '../components/SubjectFilter'
 import EmptyState from '../components/EmptyState'
@@ -10,54 +9,73 @@ import EmptyState from '../components/EmptyState'
 type SortMode = 'newest' | 'oldest' | 'subject'
 
 export default function MistakeList() {
-  const [data, setData] = useState<MistakesListResponse | null>(null)
+  const [mistakes, setMistakes] = useState<Mistake[]>([])
   const [loading, setLoading] = useState(true)
   const [subjectFilter, setSubjectFilter] = useState<Subject | 'all'>('all')
   const [searchText, setSearchText] = useState('')
   const [sortMode, setSortMode] = useState<SortMode>('newest')
-  const [page, setPage] = useState(1)
-  const limit = 20
-
-  const fetchData = useCallback(async () => {
-    setLoading(true)
-    try {
-      const params: MistakesListParams = {
-        subject: subjectFilter,
-        sort: sortMode,
-        page,
-        limit,
-      }
-      if (searchText.trim()) {
-        params.search = searchText.trim()
-      }
-      const res = await mistakesApi.list(params)
-      setData(res)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
-  }, [subjectFilter, sortMode, page, searchText])
 
   useEffect(() => {
-    fetchData()
-  }, [fetchData])
+    db.mistakes.orderBy('createdAt').reverse().toArray()
+      .then(data => {
+        setMistakes(data)
+        setLoading(false)
+      })
+      .catch(err => {
+        console.error(err)
+        setLoading(false)
+      })
+  }, [])
 
   // Debounce search
   const [searchInput, setSearchInput] = useState('')
   useEffect(() => {
     const timer = setTimeout(() => {
       setSearchText(searchInput)
-      setPage(1)
     }, 400)
     return () => clearTimeout(timer)
   }, [searchInput])
 
-  const mistakes = data?.data || []
-  const totalPages = data?.totalPages || 0
-  const total = data?.total || 0
+  const filtered = useMemo(() => {
+    let result = [...mistakes]
 
-  if (loading && !data) {
+    // Subject filter
+    if (subjectFilter !== 'all') {
+      result = result.filter(m => m.subject === subjectFilter)
+    }
+
+    // Search
+    if (searchText.trim()) {
+      const q = searchText.trim().toLowerCase()
+      result = result.filter(m =>
+        (m.title && m.title.toLowerCase().includes(q)) ||
+        (m.questionText && m.questionText.toLowerCase().includes(q)) ||
+        (m.answerText && m.answerText.toLowerCase().includes(q)) ||
+        (m.notes && m.notes.toLowerCase().includes(q)) ||
+        m.knowledgePoints.some(kp => kp.toLowerCase().includes(q)) ||
+        (m.source.book && m.source.book.toLowerCase().includes(q)) ||
+        (m.source.chapter && m.source.chapter.toLowerCase().includes(q)) ||
+        (m.source.problemNumber && m.source.problemNumber.toLowerCase().includes(q))
+      )
+    }
+
+    // Sort
+    switch (sortMode) {
+      case 'newest':
+        result.sort((a, b) => b.createdAt - a.createdAt)
+        break
+      case 'oldest':
+        result.sort((a, b) => a.createdAt - b.createdAt)
+        break
+      case 'subject':
+        result.sort((a, b) => a.subject.localeCompare(b.subject) || b.createdAt - a.createdAt)
+        break
+    }
+
+    return result
+  }, [mistakes, subjectFilter, searchText, sortMode])
+
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
@@ -69,7 +87,7 @@ export default function MistakeList() {
     <div className="space-y-4 pb-20 sm:pb-0">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-text">错题列表</h2>
-        <span className="text-sm text-text-secondary">{total} 道</span>
+        <span className="text-sm text-text-secondary">{filtered.length} 道</span>
       </div>
 
       {/* Search & Filters */}
@@ -88,7 +106,7 @@ export default function MistakeList() {
           <SortAsc className="w-4 h-4 text-text-secondary" />
           <select
             value={sortMode}
-            onChange={e => { setSortMode(e.target.value as SortMode); setPage(1) }}
+            onChange={e => setSortMode(e.target.value as SortMode)}
             className="px-3 py-2.5 bg-white border border-border rounded-lg text-sm outline-none focus:border-primary"
           >
             <option value="newest">最新优先</option>
@@ -99,48 +117,18 @@ export default function MistakeList() {
       </div>
 
       {/* Subject Filter */}
-      <SubjectFilter active={subjectFilter} onChange={(v) => { setSubjectFilter(v); setPage(1) }} />
-
-      {/* Loading */}
-      {loading && (
-        <div className="flex justify-center py-8">
-          <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
-        </div>
-      )}
+      <SubjectFilter active={subjectFilter} onChange={(v) => setSubjectFilter(v)} />
 
       {/* Mistake List */}
-      {!loading && mistakes.length === 0 ? (
+      {filtered.length === 0 ? (
         <EmptyState
           message={searchInput ? '没有搜索到匹配的错题' : subjectFilter !== 'all' ? '该学科下还没有错题' : undefined}
         />
       ) : (
         <div className="space-y-3">
-          {mistakes.map(m => (
+          {filtered.map(m => (
             <MistakeCard key={m.id} mistake={m} />
           ))}
-        </div>
-      )}
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-3 pt-2">
-          <button
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-            disabled={page <= 1}
-            className="flex items-center gap-1 px-3 py-1.5 border border-border rounded-lg text-sm disabled:opacity-30 hover:bg-gray-50 transition-colors"
-          >
-            <ChevronLeft className="w-4 h-4" /> 上一页
-          </button>
-          <span className="text-sm text-text-secondary">
-            {page} / {totalPages}
-          </span>
-          <button
-            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-            disabled={page >= totalPages}
-            className="flex items-center gap-1 px-3 py-1.5 border border-border rounded-lg text-sm disabled:opacity-30 hover:bg-gray-50 transition-colors"
-          >
-            下一页 <ChevronRight className="w-4 h-4" />
-          </button>
         </div>
       )}
     </div>

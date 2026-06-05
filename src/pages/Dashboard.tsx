@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BookOpen, Brain, TrendingUp, Target, Plus, ArrowRight } from 'lucide-react'
-import { mistakesApi } from '../services/api'
+import { db } from '../db'
 import { SUBJECTS } from '../types'
 import { formatRelativeDate } from '../hooks/utils'
 import type { Mistake } from '../types'
@@ -9,13 +9,11 @@ import type { Mistake } from '../types'
 export default function Dashboard() {
   const navigate = useNavigate()
   const [mistakes, setMistakes] = useState<Mistake[]>([])
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    mistakesApi.list({ limit: 100 })
-      .then(res => setMistakes(res.data))
+    db.mistakes.orderBy('createdAt').reverse().toArray()
+      .then(setMistakes)
       .catch(console.error)
-      .finally(() => setLoading(false))
   }, [])
 
   const totalCount = mistakes.length
@@ -30,14 +28,6 @@ export default function Dashboard() {
   }))
 
   const recentMistakes = mistakes.slice(0, 5)
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
-      </div>
-    )
-  }
 
   return (
     <div className="space-y-6 pb-20 sm:pb-0">
