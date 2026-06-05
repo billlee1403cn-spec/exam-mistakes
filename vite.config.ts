@@ -59,6 +59,10 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    outDir: 'server/dist-public',
+    emptyOutDir: true,
+  },
   server: {
     proxy: {
       '/api': {
