@@ -25,9 +25,14 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: 17.0
 
-      - name: Accept Android Licenses
-        run: yes | $ANDROID_HOME/tools/bin/sdkmanager --licenses 2>/dev/null || true
+      - name: Install Android SDK Components
+        run: |
+          yes | $ANDROID_HOME/cmdline-tools/17.0/bin/sdkmanager --install "platforms;android-36" "build-tools;36.0.0" --sdk_root=$ANDROID_HOME 2>/dev/null || true
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "platforms;android-36" "build-tools;36.0.0" --sdk_root=$ANDROID_HOME 2>/dev/null || true
+          echo "SDK setup complete"
 
       - name: Install Dependencies
         run: npm install
