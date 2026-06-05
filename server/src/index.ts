@@ -18,8 +18,11 @@ const app = express()
 app.use(cors({ origin: config.corsOrigin, credentials: true }))
 app.use(express.json({ limit: '50mb' }))
 
-// Serve frontend static files (from project root dist/)
-const distPath = path.resolve(__dirname, '..', '..', 'dist')
+// Serve frontend static files
+let distPath = path.resolve(__dirname, '..', 'dist-public')
+if (!fs.existsSync(distPath)) {
+  distPath = path.resolve(__dirname, '..', '..', 'dist')
+}
 if (fs.existsSync(distPath)) {
   app.use(express.static(distPath))
   console.log(`📦 前端静态文件目录: ${distPath}`)
