@@ -1,15 +1,5 @@
 {
   "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ],
-  "experimentalServices": {
-    "web": {
-      "routePrefix": "/",
-      "framework": "vite",
-      "buildCommand": "cd server && npm install"
-    }
-  }
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
