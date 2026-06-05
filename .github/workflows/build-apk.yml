@@ -32,11 +32,7 @@ jobs:
       - name: Build Frontend
         run: npm run build
         env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL || 'https://exam-mistakes-api.onrender.com' }}
-
-      - name: Install Dependencies (Server)
-        working-directory: server
-        run: npm ci
+          VITE_API_URL: ${{ secrets.VITE_API_URL || 'https://exam-mistakes-production.up.railway.app' }}
 
       - name: Sync Capacitor
         run: npx cap sync android
