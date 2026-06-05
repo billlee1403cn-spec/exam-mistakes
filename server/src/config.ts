@@ -8,5 +8,5 @@ export const config = {
   jwtSecret: process.env.JWT_SECRET || 'exam-mistake-tracker-secret-key-2024',
   jwtExpiresIn: '30d',
   dbPath: process.env.DB_PATH || path.join(__dirname, '..', 'data', 'mistakes.db'),
-  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  corsOrigin: process.env.CORS_ORIGIN || '*',
 }
