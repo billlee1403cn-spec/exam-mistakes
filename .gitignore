@@ -18,6 +18,7 @@ android/build/
 android/app/build/
 android/local.properties
 .cap_ingored/
+!server/dist-public/
 
 # Editor directories and files
 .vscode/*
